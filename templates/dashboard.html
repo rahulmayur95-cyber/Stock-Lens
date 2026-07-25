@@ -44,7 +44,7 @@
         <div class="row g-3">
             {% for item in watchlist %}
             <div class="col-md-6 col-lg-4">
-                <div class="card shadow-sm h-100">
+                <div class="card shadow-sm h-100 {% if item.alert %}border-warning{% endif %}">
                     <div class="card-body">
                         <h5 class="card-title mb-0">
                             {{ item.ticker }}
@@ -52,9 +52,23 @@
                         </h5>
                         <p class="text-muted small mb-2">{{ item.name }}</p>
 
-                        <p class="mb-2">
-                            <span class="text-muted">Price data:</span> coming Day 5
+                        {% if item.data_available %}
+                        <p class="mb-1">
+                            <strong>${{ "%.2f"|format(item.price) }}</strong>
+                            {% if item.change_percent is not none %}
+                                {% if item.change_percent >= 0 %}
+                                <span class="text-success">▲ {{ "%.2f"|format(item.change_percent) }}%</span>
+                                {% else %}
+                                <span class="text-danger">▼ {{ "%.2f"|format(item.change_percent) }}%</span>
+                                {% endif %}
+                            {% endif %}
                         </p>
+                        <p class="text-muted small mb-2">
+                            P/E: {{ "%.2f"|format(item.pe_ratio) if item.pe_ratio is not none else "N/A" }}
+                        </p>
+                        {% else %}
+                        <p class="text-muted mb-2">Data unavailable</p>
+                        {% endif %}
 
                         <form method="POST" action="/watchlist/target/{{ item.id }}" class="mb-2 d-flex gap-2">
                             <input type="number" step="0.01" name="target_price" class="form-control form-control-sm"

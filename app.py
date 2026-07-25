@@ -5,6 +5,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
 from tickers import search_tickers, is_valid_ticker, get_company_name
+from stock_api import get_quote
 
 # Load environment variables from .env
 load_dotenv()
@@ -12,8 +13,7 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "stocklens.db")
+DB_PATH = "stocklens.db"
 
 
 def get_db_connection():
@@ -137,12 +137,23 @@ def dashboard():
 
     watchlist = []
     for row in rows:
+        quote = get_quote(row["ticker"])
+
+        alert = False
+        if quote["available"] and row["target_price"] is not None and quote["price"] is not None:
+            if quote["price"] <= row["target_price"]:
+                alert = True
+
         watchlist.append({
             "id": row["id"],
             "ticker": row["ticker"],
             "name": get_company_name(row["ticker"]),
             "target_price": row["target_price"],
-            "alert": False,  # live price comparison added Day 5
+            "price": quote["price"],
+            "change_percent": quote["change_percent"],
+            "pe_ratio": quote["pe_ratio"],
+            "data_available": quote["available"],
+            "alert": alert,
         })
 
     message = request.args.get("message")
@@ -227,9 +238,15 @@ def stock_detail(ticker):
     if not is_valid_ticker(ticker):
         return "<h1>Stock not found</h1><p><a href='/dashboard'>Back to Dashboard</a></p>", 404
     name = get_company_name(ticker)
+    quote = get_quote(ticker)
+    if quote["available"]:
+        price_info = f"<p>Price: ${quote['price']} ({quote['change_percent']}%) | P/E: {quote['pe_ratio'] or 'N/A'}</p>"
+    else:
+        price_info = "<p>Price data unavailable right now.</p>"
     return (
         f"<h1>{ticker} — {name}</h1>"
-        f"<p>Metrics and news coming Day 5 &amp; Day 6.</p>"
+        f"{price_info}"
+        f"<p>News coming Day 6.</p>"
         f"<p><a href='/dashboard'>Back to Dashboard</a></p>"
     )
 
