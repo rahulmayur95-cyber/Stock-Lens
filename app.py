@@ -277,6 +277,7 @@ def compare():
     return render_template("compare.html", watchlist=watchlist)
 
 
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     app.run(debug=True, use_reloader=False)
