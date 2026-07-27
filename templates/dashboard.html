@@ -1,99 +1,86 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - StockLens</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="/dashboard">StockLens</a>
-            <div>
-                <a class="btn btn-outline-light btn-sm me-2" href="/dashboard">Dashboard</a>
-                <a class="btn btn-outline-light btn-sm me-2" href="/compare">Compare</a>
-                <form method="POST" action="/logout" class="d-inline">
-                    <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
-                </form>
-            </div>
-        </div>
-    </nav>
+{% extends "base.html" %}
+{% block title %}Dashboard - StockLens{% endblock %}
+{% block content %}
 
-    <div class="container">
+{% if message %}
+<div class="alert alert-info alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
 
-        {% if message %}
-        <div class="alert alert-info">{{ message }}</div>
-        {% endif %}
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="card-title" id="searchLabel">Search &amp; Add a Stock</h5>
+        <label for="tickerSearchBox" class="visually-hidden">Search by ticker or company name</label>
+        <input type="text" id="tickerSearchBox" class="form-control mb-2"
+               placeholder="Search by ticker or company name (e.g. AAPL, Tesla)"
+               aria-describedby="searchStatus" autocomplete="off">
+        <div id="searchStatus" role="status" aria-live="polite"></div>
+        <div id="searchResults" class="row g-2 mt-1"></div>
+    </div>
+</div>
 
-        <div class="card shadow-sm mb-4">
+<h4 class="mb-3">Your Watchlist</h4>
+
+{% if watchlist|length == 0 %}
+<div class="sl-empty-state">
+    <div class="sl-empty-icon">📈</div>
+    <h5 class="mb-2">Your watchlist is empty</h5>
+    <p class="mb-0">Search for a stock above to start tracking prices, news, and price alerts.</p>
+</div>
+{% else %}
+<div class="row g-3">
+    {% for item in watchlist %}
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card shadow-sm h-100 {% if item.alert %}border-warning{% endif %}">
             <div class="card-body">
-                <h5 class="card-title">Search &amp; Add a Stock</h5>
-                <input type="text" id="tickerSearchBox" class="form-control mb-3" placeholder="Search by ticker or company name (e.g. AAPL, Tesla)">
-                <div id="searchResults" class="row g-2"></div>
-            </div>
-        </div>
+                <h5 class="card-title mb-0">
+                    {{ item.ticker }}
+                    {% if item.alert %}<span class="badge bg-warning text-dark">🔔 Target hit</span>{% endif %}
+                </h5>
+                <p class="text-muted small mb-2">{{ item.name }}</p>
 
-        <h4 class="mb-3">Your Watchlist</h4>
-
-        {% if watchlist|length == 0 %}
-        <div class="alert alert-secondary">
-            Your watchlist is empty — search above to add your first stock.
-        </div>
-        {% else %}
-        <div class="row g-3">
-            {% for item in watchlist %}
-            <div class="col-md-6 col-lg-4">
-                <div class="card shadow-sm h-100 {% if item.alert %}border-warning{% endif %}">
-                    <div class="card-body">
-                        <h5 class="card-title mb-0">
-                            {{ item.ticker }}
-                            {% if item.alert %}<span class="badge bg-warning text-dark">🔔 Target hit</span>{% endif %}
-                        </h5>
-                        <p class="text-muted small mb-2">{{ item.name }}</p>
-
-                        {% if item.data_available %}
-                        <p class="mb-1">
-                            <strong>${{ "%.2f"|format(item.price) }}</strong>
-                            {% if item.change_percent is not none %}
-                                {% if item.change_percent >= 0 %}
-                                <span class="text-success">▲ {{ "%.2f"|format(item.change_percent) }}%</span>
-                                {% else %}
-                                <span class="text-danger">▼ {{ "%.2f"|format(item.change_percent) }}%</span>
-                                {% endif %}
-                            {% endif %}
-                        </p>
-                        <p class="text-muted small mb-2">
-                            P/E: {{ "%.2f"|format(item.pe_ratio) if item.pe_ratio is not none else "N/A" }}
-                        </p>
+                {% if item.data_available %}
+                <p class="mb-1">
+                    <strong>${{ "%.2f"|format(item.price) }}</strong>
+                    {% if item.change_percent is not none %}
+                        {% if item.change_percent >= 0 %}
+                        <span class="text-success">▲ {{ "%.2f"|format(item.change_percent) }}%</span>
                         {% else %}
-                        <p class="text-muted mb-2">Data unavailable</p>
+                        <span class="text-danger">▼ {{ "%.2f"|format(item.change_percent) }}%</span>
                         {% endif %}
+                    {% endif %}
+                </p>
+                <p class="text-muted small mb-2">
+                    P/E: {{ "%.2f"|format(item.pe_ratio) if item.pe_ratio is not none else "N/A" }}
+                </p>
+                {% else %}
+                <p class="text-muted mb-2">⚠️ Price data unavailable right now</p>
+                {% endif %}
 
-                        <form method="POST" action="/watchlist/target/{{ item.id }}" class="mb-2 d-flex gap-2">
-                            <input type="number" step="0.01" name="target_price" class="form-control form-control-sm"
-                                   placeholder="Target price" value="{{ item.target_price or '' }}">
-                            <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
-                        </form>
+                <form method="POST" action="/watchlist/target/{{ item.id }}" class="mb-2 d-flex gap-2">
+                    <label for="target-{{ item.id }}" class="visually-hidden">Target price for {{ item.ticker }}</label>
+                    <input type="number" step="0.01" min="0.01" name="target_price" id="target-{{ item.id }}"
+                           class="form-control form-control-sm"
+                           placeholder="Target price" value="{{ item.target_price or '' }}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">Save</button>
+                </form>
 
-                        <div class="d-flex justify-content-between">
-                            <a href="/stock/{{ item.ticker }}" class="btn btn-sm btn-primary">View</a>
-                            <form method="POST" action="/watchlist/remove/{{ item.id }}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
-                            </form>
-                        </div>
-                    </div>
+                <div class="d-flex justify-content-between">
+                    <a href="/stock/{{ item.ticker }}" class="btn btn-sm btn-primary">View</a>
+                    <form method="POST" action="/watchlist/remove/{{ item.id }}"
+                          onsubmit="return confirm('Remove {{ item.ticker }} from your watchlist?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                    </form>
                 </div>
             </div>
-            {% endfor %}
         </div>
-        {% endif %}
     </div>
-
-    <footer class="text-center text-muted small py-4">
-        Built with Claude as part of the AB Talks 60-Day Claude AI Challenge.
-    </footer>
-
-    <script src="/static/js/search.js"></script>
-</body>
-</html>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/search.js"></script>
+{% endblock %}

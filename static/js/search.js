@@ -1,10 +1,11 @@
 // StockLens - Ticker search box behavior
-// Calls /search?q=... on the server (which filters the curated tickers.py list)
-// and renders clickable "Add" cards into #searchResults.
+// Calls /search?q=... on the server and renders clickable "Add" cards.
+// Shows a lightweight loading/status message so the box never feels frozen.
 
 document.addEventListener("DOMContentLoaded", function () {
     const searchBox = document.getElementById("tickerSearchBox");
     const resultsDiv = document.getElementById("searchResults");
+    const statusDiv = document.getElementById("searchStatus");
 
     if (!searchBox) return;
 
@@ -14,6 +15,15 @@ document.addEventListener("DOMContentLoaded", function () {
         const query = searchBox.value.trim();
 
         clearTimeout(debounceTimer);
+
+        if (!query) {
+            resultsDiv.innerHTML = "";
+            statusDiv.textContent = "";
+            return;
+        }
+
+        statusDiv.textContent = "Searching...";
+
         debounceTimer = setTimeout(() => {
             fetch("/search?q=" + encodeURIComponent(query))
                 .then((res) => res.json())
@@ -21,6 +31,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     renderResults(data.results);
                 })
                 .catch(() => {
+                    statusDiv.textContent = "";
                     resultsDiv.innerHTML = '<p class="text-danger">Search failed. Please try again.</p>';
                 });
         }, 200);
@@ -30,11 +41,13 @@ document.addEventListener("DOMContentLoaded", function () {
         resultsDiv.innerHTML = "";
 
         if (!results || results.length === 0) {
+            statusDiv.textContent = "";
             resultsDiv.innerHTML = '<p class="text-muted">No matching stocks found.</p>';
             return;
         }
 
-        // Limit to first 12 shown at once to keep the UI clean
+        statusDiv.textContent = results.length + " result" + (results.length === 1 ? "" : "s") + " found";
+
         results.slice(0, 12).forEach((stock) => {
             const col = document.createElement("div");
             col.className = "col-md-4 col-lg-3";

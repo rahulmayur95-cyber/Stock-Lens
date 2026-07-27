@@ -1,0 +1,214 @@
+/* StockLens - Design system refinements (Day 7 senior UX pass) */
+
+:root {
+    --sl-navy: #13233f;
+    --sl-navy-dark: #0c1830;
+    --sl-teal: #0e7c7b;
+    --sl-teal-light: #12a3a1;
+    --sl-bg: #f4f6f8;
+    --sl-card-border: #e7eaee;
+    --sl-text-muted: #6b7280;
+    --sl-success: #1e8a5f;
+    --sl-danger: #c0392b;
+    --sl-radius: 0.6rem;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--sl-bg);
+    color: #1b1f26;
+}
+
+/* ---------- Navbar ---------- */
+.navbar {
+    background-color: var(--sl-navy) !important;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-size: 1.35rem;
+}
+
+.navbar .btn-outline-light {
+    border-color: rgba(255, 255, 255, 0.35);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.navbar .btn-outline-light:hover,
+.navbar .btn-outline-light:focus {
+    background-color: var(--sl-teal);
+    border-color: var(--sl-teal);
+}
+
+@media (max-width: 991px) {
+    #navMenu .btn {
+        width: 100%;
+    }
+}
+
+/* ---------- Cards ---------- */
+.card {
+    border: 1px solid var(--sl-card-border);
+    border-radius: var(--sl-radius);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.card.shadow-sm:hover {
+    box-shadow: 0 0.5rem 1.25rem rgba(19, 35, 63, 0.08) !important;
+    transform: translateY(-2px);
+}
+
+.card-title {
+    font-weight: 700;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+    border-radius: 0.45rem;
+    transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.btn:active {
+    transform: scale(0.97);
+}
+
+.btn-primary {
+    background-color: var(--sl-teal);
+    border-color: var(--sl-teal);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--sl-teal-light);
+    border-color: var(--sl-teal-light);
+}
+
+.btn-outline-primary {
+    color: var(--sl-teal);
+    border-color: var(--sl-teal);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--sl-teal);
+    border-color: var(--sl-teal);
+}
+
+/* Visible, accessible focus ring for keyboard users */
+.btn:focus-visible,
+.form-control:focus-visible,
+a:focus-visible {
+    outline: 3px solid rgba(14, 124, 123, 0.45);
+    outline-offset: 2px;
+}
+
+.form-control:focus {
+    border-color: var(--sl-teal);
+    box-shadow: 0 0 0 0.2rem rgba(14, 124, 123, 0.15);
+}
+
+/* ---------- Alert badge (price target hit) ---------- */
+.badge.bg-warning {
+    animation: sl-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sl-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.border-warning {
+    border-width: 2px !important;
+}
+
+/* ---------- Empty / info states ---------- */
+.sl-empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    background-color: #fff;
+    border: 1px dashed var(--sl-card-border);
+    border-radius: var(--sl-radius);
+    color: var(--sl-text-muted);
+}
+
+.sl-empty-state .sl-empty-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.6;
+}
+
+/* ---------- Search results ---------- */
+#searchResults .border {
+    border-radius: 0.45rem !important;
+    transition: border-color 0.15s ease;
+}
+
+#searchResults .border:hover {
+    border-color: var(--sl-teal) !important;
+}
+
+#searchStatus {
+    font-size: 0.85rem;
+    color: var(--sl-text-muted);
+    min-height: 1.2rem;
+}
+
+/* ---------- Table (Compare view) ---------- */
+.table thead {
+    background-color: var(--sl-navy) !important;
+}
+
+.table th {
+    user-select: none;
+    white-space: nowrap;
+}
+
+.table th:hover {
+    background-color: var(--sl-navy-dark);
+}
+
+.table tbody tr {
+    transition: background-color 0.1s ease;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(14, 124, 123, 0.06);
+}
+
+/* ---------- Footer ---------- */
+footer {
+    border-top: 1px solid var(--sl-card-border);
+    color: var(--sl-text-muted);
+}
+
+/* ---------- Auth cards ---------- */
+.card.shadow-sm:has(form[action="/login"]),
+.card.shadow-sm:has(form[action="/signup"]) {
+    border-top: 4px solid var(--sl-teal);
+}
+
+/* ---------- Skip link (accessibility) ---------- */
+.sl-skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    background: var(--sl-navy);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    z-index: 2000;
+    border-radius: 0 0 0.4rem 0;
+}
+
+.sl-skip-link:focus {
+    left: 0;
+}
+
+/* ---------- Small screens ---------- */
+@media (max-width: 575px) {
+    .card-body {
+        padding: 1rem;
+    }
+    .fs-4 {
+        font-size: 1.25rem !important;
+    }
+}
