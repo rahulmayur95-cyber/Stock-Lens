@@ -60,8 +60,9 @@
                 {% endif %}
 
                 <form method="POST" action="/watchlist/target/{{ item.id }}" class="mb-2 d-flex gap-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <label for="target-{{ item.id }}" class="visually-hidden">Target price for {{ item.ticker }}</label>
-                    <input type="number" step="0.01" min="0.01" name="target_price" id="target-{{ item.id }}"
+                    <input type="number" step="0.01" min="0.01" max="1000000" name="target_price" id="target-{{ item.id }}"
                            class="form-control form-control-sm"
                            placeholder="Target price" value="{{ item.target_price or '' }}">
                     <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">Save</button>
@@ -71,6 +72,7 @@
                     <a href="/stock/{{ item.ticker }}" class="btn btn-sm btn-primary">View</a>
                     <form method="POST" action="/watchlist/remove/{{ item.id }}"
                           onsubmit="return confirm('Remove {{ item.ticker }} from your watchlist?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
                     </form>
                 </div>
@@ -82,5 +84,8 @@
 {% endif %}
 {% endblock %}
 {% block scripts %}
+<script>
+    window.STOCKLENS_CSRF_TOKEN = "{{ csrf_token }}";
+</script>
 <script src="/static/js/search.js"></script>
 {% endblock %}

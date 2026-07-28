@@ -9,20 +9,21 @@
                 <p class="text-center text-muted mb-4">Log in to your account</p>
 
                 {% if error %}
-                <div class="alert alert-danger">{{ error }}</div>
+                <div class="alert alert-danger" role="alert">{{ error }}</div>
                 {% endif %}
                 {% if success %}
-                <div class="alert alert-success">{{ success }}</div>
+                <div class="alert alert-success" role="alert">{{ success }}</div>
                 {% endif %}
 
                 <form method="POST" action="/login" novalidate>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <div class="mb-3">
-                        <label class="form-label">Username</label>
-                        <input type="text" class="form-control" name="username" required value="{{ username or '' }}" autofocus>
+                        <label class="form-label" for="username">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required value="{{ username or '' }}" autofocus>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Password</label>
-                        <input type="password" class="form-control" name="password" required minlength="6">
+                        <label class="form-label" for="password">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required minlength="6">
                     </div>
                     <button type="submit" class="btn btn-primary w-100">Log In</button>
                 </form>

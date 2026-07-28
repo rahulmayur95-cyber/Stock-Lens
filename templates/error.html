@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} - StockLens{% endblock %}
+{% block content %}
+<div class="sl-empty-state mt-5">
+    <div class="sl-empty-icon">
+        {% if code == 404 %}🔍{% elif code == 429 %}⏳{% else %}⚠️{% endif %}
+    </div>
+    <h2 class="mb-2">{{ code }}</h2>
+    <p class="mb-4">{{ message }}</p>
+    <a href="/dashboard" class="btn btn-primary">Back to Dashboard</a>
+</div>
+{% endblock %}

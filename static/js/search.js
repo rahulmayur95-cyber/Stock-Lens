@@ -1,11 +1,13 @@
 // StockLens - Ticker search box behavior
 // Calls /search?q=... on the server and renders clickable "Add" cards.
 // Shows a lightweight loading/status message so the box never feels frozen.
+// Includes the page's CSRF token in dynamically generated forms.
 
 document.addEventListener("DOMContentLoaded", function () {
     const searchBox = document.getElementById("tickerSearchBox");
     const resultsDiv = document.getElementById("searchResults");
     const statusDiv = document.getElementById("searchStatus");
+    const csrfToken = window.STOCKLENS_CSRF_TOKEN || "";
 
     if (!searchBox) return;
 
@@ -37,6 +39,12 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 200);
     });
 
+    function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
     function renderResults(results) {
         resultsDiv.innerHTML = "";
 
@@ -55,11 +63,12 @@ document.addEventListener("DOMContentLoaded", function () {
             col.innerHTML = `
                 <div class="border rounded p-2 d-flex justify-content-between align-items-center">
                     <div>
-                        <strong>${stock.ticker}</strong>
-                        <div class="small text-muted">${stock.name}</div>
+                        <strong>${escapeHtml(stock.ticker)}</strong>
+                        <div class="small text-muted">${escapeHtml(stock.name)}</div>
                     </div>
                     <form method="POST" action="/watchlist/add">
-                        <input type="hidden" name="ticker" value="${stock.ticker}">
+                        <input type="hidden" name="csrf_token" value="${escapeHtml(csrfToken)}">
+                        <input type="hidden" name="ticker" value="${escapeHtml(stock.ticker)}">
                         <button type="submit" class="btn btn-sm btn-success">Add</button>
                     </form>
                 </div>
