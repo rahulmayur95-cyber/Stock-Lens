@@ -28,10 +28,10 @@
             <tr>
                 <td>{{ item.ticker }}</td>
                 <td>{{ item.name }}</td>
-                <td>{{ "%.2f"|format(item.price) if item.data_available else "N/A" }}</td>
+                <td>{{ item.currency ~ "%.2f"|format(item.price) if item.data_available else "N/A" }}</td>
                 <td>{{ "%.2f"|format(item.change_percent) if item.data_available and item.change_percent is not none else "N/A" }}</td>
                 <td>{{ "%.2f"|format(item.pe_ratio) if item.pe_ratio is not none else "N/A" }}</td>
-                <td>{{ "%.2f"|format(item.target_price) if item.target_price is not none else "—" }}</td>
+                <td>{{ item.currency ~ "%.2f"|format(item.target_price) if item.target_price is not none else "—" }}</td>
                 <td>{% if item.alert %}<span class="badge bg-warning text-dark">🔔</span>{% endif %}</td>
             </tr>
             {% endfor %}

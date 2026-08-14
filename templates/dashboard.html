@@ -43,7 +43,7 @@
 
                 {% if item.data_available %}
                 <p class="mb-1">
-                    <strong>${{ "%.2f"|format(item.price) }}</strong>
+                    <strong>{{ item.currency }}{{ "%.2f"|format(item.price) }}</strong>
                     {% if item.change_percent is not none %}
                         {% if item.change_percent >= 0 %}
                         <span class="text-success">▲ {{ "%.2f"|format(item.change_percent) }}%</span>

@@ -69,6 +69,55 @@ TICKERS = [
     {"ticker": "NOW", "name": "ServiceNow Inc."},
 ]
 
+# Curated list of popular Indian (NSE-listed) tickers for StockLens.
+# Ticker symbols use the ".NS" suffix, matching Yahoo Finance's NSE convention
+# (StockLens fetches Indian quotes/history via yfinance - see indian_stock_api.py).
+INDIAN_TICKERS = [
+    {"ticker": "RELIANCE.NS", "name": "Reliance Industries Ltd. (NSE)"},
+    {"ticker": "TCS.NS", "name": "Tata Consultancy Services Ltd. (NSE)"},
+    {"ticker": "HDFCBANK.NS", "name": "HDFC Bank Ltd. (NSE)"},
+    {"ticker": "INFY.NS", "name": "Infosys Ltd. (NSE)"},
+    {"ticker": "ICICIBANK.NS", "name": "ICICI Bank Ltd. (NSE)"},
+    {"ticker": "HINDUNILVR.NS", "name": "Hindustan Unilever Ltd. (NSE)"},
+    {"ticker": "SBIN.NS", "name": "State Bank of India (NSE)"},
+    {"ticker": "BHARTIARTL.NS", "name": "Bharti Airtel Ltd. (NSE)"},
+    {"ticker": "ITC.NS", "name": "ITC Ltd. (NSE)"},
+    {"ticker": "KOTAKBANK.NS", "name": "Kotak Mahindra Bank Ltd. (NSE)"},
+    {"ticker": "LT.NS", "name": "Larsen & Toubro Ltd. (NSE)"},
+    {"ticker": "AXISBANK.NS", "name": "Axis Bank Ltd. (NSE)"},
+    {"ticker": "BAJFINANCE.NS", "name": "Bajaj Finance Ltd. (NSE)"},
+    {"ticker": "MARUTI.NS", "name": "Maruti Suzuki India Ltd. (NSE)"},
+    {"ticker": "SUNPHARMA.NS", "name": "Sun Pharmaceutical Industries Ltd. (NSE)"},
+    {"ticker": "TITAN.NS", "name": "Titan Company Ltd. (NSE)"},
+    {"ticker": "ASIANPAINT.NS", "name": "Asian Paints Ltd. (NSE)"},
+    {"ticker": "WIPRO.NS", "name": "Wipro Ltd. (NSE)"},
+    {"ticker": "ADANIENT.NS", "name": "Adani Enterprises Ltd. (NSE)"},
+    {"ticker": "TATAMOTORS.NS", "name": "Tata Motors Ltd. (NSE)"},
+    {"ticker": "TATASTEEL.NS", "name": "Tata Steel Ltd. (NSE)"},
+    {"ticker": "NTPC.NS", "name": "NTPC Ltd. (NSE)"},
+    {"ticker": "ONGC.NS", "name": "Oil & Natural Gas Corporation Ltd. (NSE)"},
+    {"ticker": "POWERGRID.NS", "name": "Power Grid Corporation of India Ltd. (NSE)"},
+    {"ticker": "HCLTECH.NS", "name": "HCL Technologies Ltd. (NSE)"},
+    {"ticker": "ULTRACEMCO.NS", "name": "UltraTech Cement Ltd. (NSE)"},
+    {"ticker": "NESTLEIND.NS", "name": "Nestle India Ltd. (NSE)"},
+    {"ticker": "JSWSTEEL.NS", "name": "JSW Steel Ltd. (NSE)"},
+    {"ticker": "ZOMATO.NS", "name": "Eternal Ltd. (Zomato) (NSE)"},
+    {"ticker": "IRFC.NS", "name": "Indian Railway Finance Corporation Ltd. (NSE)"},
+]
+
+# Combined list used everywhere in the app (search, validation, lookups).
+TICKERS = TICKERS + INDIAN_TICKERS
+
+
+def is_indian_ticker(ticker: str) -> bool:
+    """Indian (NSE/BSE) tickers use the .NS or .BO suffix, per Yahoo Finance convention."""
+    return ticker.upper().endswith((".NS", ".BO"))
+
+
+def get_currency_symbol(ticker: str) -> str:
+    """Return the display currency symbol for a ticker."""
+    return "\u20b9" if is_indian_ticker(ticker) else "$"
+
 
 def search_tickers(query: str):
     """Return tickers matching a query by ticker symbol or company name (case-insensitive)."""

@@ -2,6 +2,9 @@ import os
 import time
 import requests
 
+from tickers import is_indian_ticker
+from indian_stock_api import get_quote_indian
+
 FINNHUB_BASE_URL = "https://finnhub.io/api/v1"
 
 # Simple in-memory cache: { ticker: {"data": {...}, "timestamp": epoch_seconds} }
@@ -69,11 +72,16 @@ def _fetch_quote_once(ticker, api_key):
 
 def get_quote(ticker):
     """
-    Fetch price, % change, and P/E ratio for a ticker from Finnhub.
+    Fetch price, % change, and P/E ratio for a ticker.
+    Indian (.NS/.BO) tickers are routed to yfinance (Finnhub's free tier doesn't
+    reliably cover NSE/BSE); everything else goes through Finnhub as before.
     Returns a dict: {"price": float, "change_percent": float, "pe_ratio": float or None, "available": bool}
     Never raises - on any failure, returns available=False so the UI can show a fallback.
     Retries once on transient network errors before giving up.
     """
+    if is_indian_ticker(ticker):
+        return get_quote_indian(ticker)
+
     cached = _get_cached(ticker)
     if cached is not None:
         return cached

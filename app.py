@@ -7,9 +7,11 @@ from flask import Flask, render_template, request, session, redirect, url_for, j
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
-from tickers import search_tickers, is_valid_ticker, get_company_name
+from tickers import search_tickers, is_valid_ticker, get_company_name, get_currency_symbol
 from stock_api import get_quote
 from news_api import get_news
+from history_api import get_history
+from signal_api import build_signal
 
 # Load environment variables from .env
 load_dotenv()
@@ -95,6 +97,7 @@ def get_enriched_watchlist(user_id):
             "pe_ratio": quote["pe_ratio"],
             "data_available": quote["available"],
             "alert": alert,
+            "currency": get_currency_symbol(row["ticker"]),
         })
 
     return watchlist
@@ -369,6 +372,14 @@ def stock_detail(ticker):
     name = get_company_name(ticker)
     quote = get_quote(ticker)
     news = get_news(ticker)
+    history = get_history(ticker)
+
+    # The signal engine wants "close" from the same live quote users see on
+    # screen (falls back to the last historical close if the live quote failed).
+    latest_indicators = dict(history["latest"])
+    if quote["available"] and quote["price"] is not None:
+        latest_indicators["close"] = quote["price"]
+    signal = build_signal(latest_indicators, news)
 
     return render_template(
         "stock_detail.html",
@@ -378,7 +389,10 @@ def stock_detail(ticker):
         change_percent=quote["change_percent"],
         pe_ratio=quote["pe_ratio"],
         data_available=quote["available"],
+        currency=get_currency_symbol(ticker),
         news=news,
+        history=history,
+        signal=signal,
     )
 
 

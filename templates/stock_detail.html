@@ -8,7 +8,7 @@
         <h2 class="mb-0">{{ ticker }} — {{ name }}</h2>
         {% if data_available %}
         <p class="fs-4 mb-1">
-            <strong>${{ "%.2f"|format(price) }}</strong>
+            <strong>{{ currency }}{{ "%.2f"|format(price) }}</strong>
             {% if change_percent is not none %}
                 {% if change_percent >= 0 %}
                 <span class="text-success">▲ {{ "%.2f"|format(change_percent) }}%</span>
@@ -20,6 +20,47 @@
         <p class="text-muted">P/E: {{ "%.2f"|format(pe_ratio) if pe_ratio is not none else "N/A" }}</p>
         {% else %}
         <p class="text-muted">⚠️ Price data unavailable right now.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+            <h4 class="mb-0">Signal:
+                <span class="badge {% if signal.verdict == 'BUY' %}bg-success{% elif signal.verdict == 'SELL' %}bg-danger{% else %}bg-secondary{% endif %} fs-6">
+                    {{ signal.verdict }}
+                </span>
+            </h4>
+        </div>
+        {% if signal.reasons %}
+        <ul class="mb-2">
+            {% for reason in signal.reasons %}
+            <li>{{ reason }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        <p class="small text-muted mb-0">⚠️ {{ signal.disclaimer }}</p>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h4 class="mb-3">Price Chart <span class="text-muted small fw-normal">(6 months, with 20/50-day moving averages)</span></h4>
+        {% if history.available %}
+        <canvas id="priceChart" height="110"></canvas>
+        <div class="row mt-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <h6>RSI (14)</h6>
+                <canvas id="rsiChart" height="90"></canvas>
+            </div>
+            <div class="col-md-6">
+                <h6>MACD (12, 26, 9)</h6>
+                <canvas id="macdChart" height="90"></canvas>
+            </div>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">⚠️ Historical chart data unavailable right now.</p>
         {% endif %}
     </div>
 </div>
@@ -39,5 +80,65 @@
     </a>
     {% endfor %}
 </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if history.available %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+    const slDates = {{ history.dates|tojson }};
+    const slClose = {{ history.close|tojson }};
+    const slSma20 = {{ history.sma20|tojson }};
+    const slSma50 = {{ history.sma50|tojson }};
+    const slRsi = {{ history.rsi|tojson }};
+    const slMacd = {{ history.macd|tojson }};
+    const slMacdSignal = {{ history.macd_signal|tojson }};
+
+    new Chart(document.getElementById("priceChart"), {
+        type: "line",
+        data: {
+            labels: slDates,
+            datasets: [
+                { label: "Close", data: slClose, borderColor: "#0e7c7b", borderWidth: 2, pointRadius: 0, tension: 0.1 },
+                { label: "SMA 20", data: slSma20, borderColor: "#f4a259", borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
+                { label: "SMA 50", data: slSma50, borderColor: "#13233f", borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
+            ],
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: "index", intersect: false },
+            scales: { x: { ticks: { maxTicksLimit: 8 } } },
+        },
+    });
+
+    new Chart(document.getElementById("rsiChart"), {
+        type: "line",
+        data: {
+            labels: slDates,
+            datasets: [{ label: "RSI 14", data: slRsi, borderColor: "#0e7c7b", borderWidth: 1.5, pointRadius: 0, tension: 0.1 }],
+        },
+        options: {
+            responsive: true,
+            scales: { y: { min: 0, max: 100 }, x: { ticks: { maxTicksLimit: 5 } } },
+            plugins: { legend: { display: false } },
+        },
+    });
+
+    new Chart(document.getElementById("macdChart"), {
+        type: "line",
+        data: {
+            labels: slDates,
+            datasets: [
+                { label: "MACD", data: slMacd, borderColor: "#0e7c7b", borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
+                { label: "Signal", data: slMacdSignal, borderColor: "#f4a259", borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
+            ],
+        },
+        options: {
+            responsive: true,
+            scales: { x: { ticks: { maxTicksLimit: 5 } } },
+        },
+    });
+</script>
 {% endif %}
 {% endblock %}
