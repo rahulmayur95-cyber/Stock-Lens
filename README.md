@@ -19,14 +19,6 @@ Built as a 10-day capstone project for the **AB Talks 60-Day Claude AI Challenge
 - 📊 **Compare view** — sortable side-by-side table of your entire watchlist
 - 📱 **Responsive design** — works cleanly on desktop and mobile
 
-## 🖼️ Screenshots
-
-> _Add your own screenshots here! Suggested: Dashboard, Stock Detail (with news), Compare view, and mobile view._
-
-| Dashboard | Stock Detail | Compare |
-|---|---|---|
-| _screenshot here_ | _screenshot here_ | _screenshot here_ |
-
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
