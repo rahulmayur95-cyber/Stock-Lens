@@ -11,12 +11,9 @@ reliable first pass and as a fallback if the live search fails.
 import sys
 import time
 import yfinance as yf
-from curl_cffi import requests as curl_requests
+from yf_session import get_session
 
 from tickers import search_tickers as search_curated
-
-# See indian_stock_api.py for why this session exists.
-_session = curl_requests.Session(impersonate="chrome")
 
 _cache = {}
 CACHE_TTL_SECONDS = 300  # search results don't need to be second-fresh
@@ -40,7 +37,7 @@ def _display_name(quote):
 
 def _search_live(query, limit):
     try:
-        results = yf.Search(query, max_results=limit, session=_session).quotes
+        results = yf.Search(query, max_results=limit, session=get_session()).quotes
     except Exception as e:
         print(f"[stock_search_api] live search for {query!r} failed: {e!r}", file=sys.stderr, flush=True)
         return []

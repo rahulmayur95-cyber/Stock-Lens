@@ -9,13 +9,7 @@ This mirrors stock_api.py's shape/caching so app.py can treat both the same way.
 import sys
 import time
 import yfinance as yf
-from curl_cffi import requests as curl_requests
-
-# yfinance's default requests session gets silently blocked by Yahoo Finance on
-# many cloud/datacenter IPs (Render, AWS, etc.) even though it works fine from
-# a home connection. Impersonating a real browser's TLS/HTTP fingerprint via
-# curl_cffi is yfinance's own documented workaround for this.
-_session = curl_requests.Session(impersonate="chrome")
+from yf_session import get_session
 
 # Simple in-memory cache: { ticker: {"data": {...}, "timestamp": epoch_seconds} }
 _cache = {}
@@ -40,7 +34,7 @@ def _store(ticker, data):
 
 def _fetch_quote_once(ticker):
     """Single attempt at fetching an Indian stock quote via yfinance. May raise exceptions."""
-    tk = yf.Ticker(ticker, session=_session)
+    tk = yf.Ticker(ticker, session=get_session())
 
     # Last 5 trading days of daily closes is enough to get latest price + % change
     # without the heavier/slower full "info" scrape.

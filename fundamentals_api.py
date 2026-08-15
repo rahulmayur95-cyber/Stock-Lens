@@ -9,10 +9,7 @@ doesn't expose most of these fields (especially not for NSE/BSE tickers).
 import sys
 import time
 import yfinance as yf
-from curl_cffi import requests as curl_requests
-
-# See indian_stock_api.py for why this session exists.
-_session = curl_requests.Session(impersonate="chrome")
+from yf_session import get_session
 
 _cache = {}
 CACHE_TTL_SECONDS = 3600  # fundamentals change slowly - cache 1 hour
@@ -63,7 +60,7 @@ def _round(value, digits=2):
 
 
 def _fetch_once(ticker):
-    tk = yf.Ticker(ticker, session=_session)
+    tk = yf.Ticker(ticker, session=get_session())
     info = tk.get_info() or {}
 
     if not info:
@@ -150,7 +147,7 @@ def _row_values(df, candidate_names, num_quarters):
 
 
 def _fetch_trends_once(ticker, num_quarters=8):
-    tk = yf.Ticker(ticker, session=_session)
+    tk = yf.Ticker(ticker, session=get_session())
     income_stmt = tk.quarterly_income_stmt
     cashflow = tk.quarterly_cashflow
 

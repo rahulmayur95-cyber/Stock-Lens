@@ -4,14 +4,11 @@ import time
 from datetime import datetime, timedelta
 import requests
 import yfinance as yf
-from curl_cffi import requests as curl_requests
+from yf_session import get_session
 
 from tickers import is_indian_ticker
 
 FINNHUB_BASE_URL = "https://finnhub.io/api/v1"
-
-# See indian_stock_api.py for why this session exists.
-_session = curl_requests.Session(impersonate="chrome")
 
 _cache = {}
 CACHE_TTL_SECONDS = 300  # news changes slowly - cache 5 minutes
@@ -35,7 +32,7 @@ def _get_news_yfinance(ticker, limit):
     Finnhub returns nothing for.
     """
     try:
-        tk = yf.Ticker(ticker, session=_session)
+        tk = yf.Ticker(ticker, session=get_session())
         items = tk.get_news(count=limit) or []
     except Exception as e:
         print(f"[news_api] yfinance news for {ticker} failed: {e!r}", file=sys.stderr, flush=True)

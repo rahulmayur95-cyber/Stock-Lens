@@ -18,10 +18,7 @@ import sys
 import time
 import pandas as pd
 import yfinance as yf
-from curl_cffi import requests as curl_requests
-
-# See indian_stock_api.py for why this session exists.
-_session = curl_requests.Session(impersonate="chrome")
+from yf_session import get_session
 
 _cache = {}
 CACHE_TTL_SECONDS = 900  # history changes slowly intraday - cache 15 minutes
@@ -187,7 +184,7 @@ def _detect_patterns(open_: pd.Series, high: pd.Series, low: pd.Series, close: p
 
 def _fetch_once(ticker, interval):
     period = PERIOD_FOR_INTERVAL[interval]
-    tk = yf.Ticker(ticker, session=_session)
+    tk = yf.Ticker(ticker, session=get_session())
     hist = tk.history(period=period, interval=interval)
 
     if hist is None or hist.empty or "Close" not in hist:

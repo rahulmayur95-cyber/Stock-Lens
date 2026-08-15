@@ -13,7 +13,7 @@ import re
 import sys
 import time
 import yfinance as yf
-from curl_cffi import requests as curl_requests
+from yf_session import get_session
 
 TICKERS = [
     {"ticker": "AAPL", "name": "Apple Inc."},
@@ -146,7 +146,6 @@ def search_tickers(query: str):
 
 _TICKER_FORMAT = re.compile(r"^[A-Z0-9][A-Z0-9.\-]{0,14}$")
 
-_session = curl_requests.Session(impersonate="chrome")
 _validity_cache = {}  # ticker -> {"valid": bool, "name": str or None, "timestamp": epoch}
 VALID_CACHE_TTL_SECONDS = 86400   # confirmed-real tickers rarely stop existing - cache 1 day
 INVALID_CACHE_TTL_SECONDS = 300   # could be a transient failure - only cache 5 minutes
@@ -173,7 +172,7 @@ def _live_lookup(ticker: str):
     """Confirm a ticker is real via yfinance, and grab its display name while we're at it.
     Returns (valid: bool, name: str or None). Never raises."""
     try:
-        info = yf.Ticker(ticker, session=_session).get_info()
+        info = yf.Ticker(ticker, session=get_session()).get_info()
         if not info or not info.get("symbol"):
             return False, None
         name = info.get("longName") or info.get("shortName") or ticker
