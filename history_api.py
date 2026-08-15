@@ -7,9 +7,16 @@ free tier no longer includes historical candle data for stocks, so yfinance
 (free, no API key) is the single source for chart history.
 """
 
+import sys
 import time
 import pandas as pd
 import yfinance as yf
+from curl_cffi import requests as curl_requests
+
+# See indian_stock_api.py for why this session exists: Yahoo Finance blocks
+# yfinance's default session on many cloud/datacenter IPs (Render, AWS, etc.),
+# so we impersonate a real browser's TLS/HTTP fingerprint via curl_cffi.
+_session = curl_requests.Session(impersonate="chrome")
 
 _cache = {}
 CACHE_TTL_SECONDS = 900  # history changes slowly intraday - cache 15 minutes
@@ -76,7 +83,7 @@ def _compute_indicators(close: pd.Series):
 
 
 def _fetch_once(ticker, period):
-    tk = yf.Ticker(ticker)
+    tk = yf.Ticker(ticker, session=_session)
     hist = tk.history(period=period, interval="1d")
 
     if hist is None or hist.empty or "Close" not in hist:
@@ -127,7 +134,8 @@ def get_history(ticker, period="6mo"):
         try:
             result = _fetch_once(ticker, period)
             return _store(ticker, result)
-        except Exception:
+        except Exception as e:
+            print(f"[history_api] get_history({ticker}) attempt {attempt} failed: {e!r}", file=sys.stderr, flush=True)
             if attempt == 0:
                 time.sleep(0.3)
             continue
