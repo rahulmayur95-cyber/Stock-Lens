@@ -26,6 +26,54 @@
 
 <div class="card shadow-sm mb-4">
     <div class="card-body">
+        <h4 class="mb-3">Key Metrics</h4>
+        {% if fundamentals.available %}
+        <div class="row g-3">
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">Market Cap</div>
+                <div class="fw-semibold">{{ market_cap_display }}</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">ROE</div>
+                <div class="fw-semibold">{{ "%.1f"|format(fundamentals.roe) ~ "%" if fundamentals.roe is not none else "N/A" }}</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">Dividend Yield</div>
+                <div class="fw-semibold">{{ "%.2f"|format(fundamentals.dividend_yield) ~ "%" if fundamentals.dividend_yield is not none else "N/A" }}</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">Profit Margin</div>
+                <div class="fw-semibold">{{ "%.1f"|format(fundamentals.profit_margin) ~ "%" if fundamentals.profit_margin is not none else "N/A" }}</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">EPS</div>
+                <div class="fw-semibold">{{ currency ~ "%.2f"|format(fundamentals.eps) if fundamentals.eps is not none else "N/A" }}</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">Book Value / Share</div>
+                <div class="fw-semibold">{{ currency ~ "%.2f"|format(fundamentals.book_value) if fundamentals.book_value is not none else "N/A" }}</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">52-Week High</div>
+                <div class="fw-semibold">{{ currency ~ "%.2f"|format(fundamentals.week52_high) if fundamentals.week52_high is not none else "N/A" }}</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">52-Week Low</div>
+                <div class="fw-semibold">{{ currency ~ "%.2f"|format(fundamentals.week52_low) if fundamentals.week52_low is not none else "N/A" }}</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">Debt / Equity</div>
+                <div class="fw-semibold">{{ "%.2f"|format(fundamentals.debt_to_equity) if fundamentals.debt_to_equity is not none else "N/A" }}</div>
+            </div>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">⚠️ Fundamental data unavailable right now.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
             <h4 class="mb-0">Signal:
                 <span class="badge {% if signal.verdict == 'BUY' %}bg-success{% elif signal.verdict == 'SELL' %}bg-danger{% else %}bg-secondary{% endif %} fs-6">

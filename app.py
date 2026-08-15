@@ -12,6 +12,7 @@ from stock_api import get_quote
 from news_api import get_news
 from history_api import get_history
 from signal_api import build_signal
+from fundamentals_api import get_fundamentals, format_market_cap
 
 # Load environment variables from .env
 load_dotenv()
@@ -373,6 +374,9 @@ def stock_detail(ticker):
     quote = get_quote(ticker)
     news = get_news(ticker)
     history = get_history(ticker)
+    fundamentals = get_fundamentals(ticker)
+    currency = get_currency_symbol(ticker)
+    market_cap_display = format_market_cap(fundamentals["market_cap"], currency)
 
     # The signal engine wants "close" from the same live quote users see on
     # screen (falls back to the last historical close if the live quote failed).
@@ -389,10 +393,12 @@ def stock_detail(ticker):
         change_percent=quote["change_percent"],
         pe_ratio=quote["pe_ratio"],
         data_available=quote["available"],
-        currency=get_currency_symbol(ticker),
+        currency=currency,
         news=news,
         history=history,
         signal=signal,
+        fundamentals=fundamentals,
+        market_cap_display=market_cap_display,
     )
 
 
