@@ -7,7 +7,8 @@ from flask import Flask, render_template, request, session, redirect, url_for, j
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
-from tickers import search_tickers, is_valid_ticker, get_company_name, get_currency_symbol
+from tickers import is_valid_ticker, get_company_name, get_currency_symbol
+from stock_search_api import search_stocks
 from stock_api import get_quote
 from news_api import get_news
 from history_api import get_history
@@ -292,7 +293,7 @@ def search():
     query = request.args.get("q", "").strip()
     if len(query) > 50:
         query = query[:50]
-    results = search_tickers(query)
+    results = search_stocks(query)
     return jsonify({"results": results[:20]})  # cap payload size for broad/empty queries
 
 

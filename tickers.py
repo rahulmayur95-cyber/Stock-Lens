@@ -1,9 +1,19 @@
 """
 Curated list of popular stock tickers for StockLens v1.0.
-This is a fixed reference list (not a database table) since it's static
-reference data, not user-generated content. Used for search/add on the
-dashboard. See ARCHITECTURE.md and SCHEMA.md for rationale.
+This is a fixed reference list (not a database table) used as a fast,
+reliable first pass for search, plus a fallback if live lookups fail.
+For anything outside this list, StockLens validates/looks up tickers live
+via Yahoo Finance (see stock_search_api.py for search, and the live lookups
+below for validation and company names) so any real NSE/BSE or US stock can
+be added, not just the ones curated here.
+See ARCHITECTURE.md and SCHEMA.md for rationale.
 """
+
+import re
+import sys
+import time
+import yfinance as yf
+from curl_cffi import requests as curl_requests
 
 TICKERS = [
     {"ticker": "AAPL", "name": "Apple Inc."},
@@ -120,21 +130,90 @@ def get_currency_symbol(ticker: str) -> str:
 
 
 def search_tickers(query: str):
-    """Return tickers matching a query by ticker symbol or company name (case-insensitive)."""
+    """Return curated tickers matching a query by symbol or company name (case-insensitive).
+    This only searches the small curated list - see stock_search_api.py for full-market search."""
     if not query:
         return TICKERS
     q = query.strip().lower()
     return [t for t in TICKERS if q in t["ticker"].lower() or q in t["name"].lower()]
 
 
-def is_valid_ticker(ticker: str) -> bool:
-    """Check whether a ticker exists in the curated list."""
-    return any(t["ticker"] == ticker for t in TICKERS)
+# --- Live validation/lookup for tickers outside the curated list -----------
+# StockLens's watchlist accepts any real NSE/BSE or US stock, not just the
+# ~90 curated above. For anything not in the curated list, we confirm it's a
+# real ticker (and later, its display name) via a live Yahoo Finance lookup,
+# caching results so repeat visits don't re-hit the network every time.
+
+_TICKER_FORMAT = re.compile(r"^[A-Z0-9][A-Z0-9.\-]{0,14}$")
+
+_session = curl_requests.Session(impersonate="chrome")
+_validity_cache = {}  # ticker -> {"valid": bool, "name": str or None, "timestamp": epoch}
+VALID_CACHE_TTL_SECONDS = 86400   # confirmed-real tickers rarely stop existing - cache 1 day
+INVALID_CACHE_TTL_SECONDS = 300   # could be a transient failure - only cache 5 minutes
 
 
-def get_company_name(ticker: str) -> str:
-    """Look up the company name for a given ticker; returns the ticker itself if not found."""
+def _curated_lookup(ticker: str):
     for t in TICKERS:
         if t["ticker"] == ticker:
             return t["name"]
-    return ticker
+    return None
+
+
+def _get_cached_validity(ticker):
+    entry = _validity_cache.get(ticker)
+    if not entry:
+        return None
+    ttl = VALID_CACHE_TTL_SECONDS if entry["valid"] else INVALID_CACHE_TTL_SECONDS
+    if (time.time() - entry["timestamp"]) < ttl:
+        return entry
+    return None
+
+
+def _live_lookup(ticker: str):
+    """Confirm a ticker is real via yfinance, and grab its display name while we're at it.
+    Returns (valid: bool, name: str or None). Never raises."""
+    try:
+        info = yf.Ticker(ticker, session=_session).get_info()
+        if not info or not info.get("symbol"):
+            return False, None
+        name = info.get("longName") or info.get("shortName") or ticker
+        return True, name
+    except Exception as e:
+        print(f"[tickers] live lookup for {ticker!r} failed: {e!r}", file=sys.stderr, flush=True)
+        return False, None
+
+
+def is_valid_ticker(ticker: str) -> bool:
+    """Check whether a ticker is real: curated list first (instant), then a
+    live Yahoo Finance check for anything else (cached to avoid repeat network calls)."""
+    ticker = ticker.upper().strip()
+
+    if not _TICKER_FORMAT.match(ticker):
+        return False
+
+    if _curated_lookup(ticker) is not None:
+        return True
+
+    cached = _get_cached_validity(ticker)
+    if cached is not None:
+        return cached["valid"]
+
+    valid, name = _live_lookup(ticker)
+    _validity_cache[ticker] = {"valid": valid, "name": name, "timestamp": time.time()}
+    return valid
+
+
+def get_company_name(ticker: str) -> str:
+    """Look up the company name for a given ticker: curated list first, then
+    a live/cached Yahoo Finance lookup, falling back to the ticker itself."""
+    curated_name = _curated_lookup(ticker)
+    if curated_name is not None:
+        return curated_name
+
+    cached = _get_cached_validity(ticker)
+    if cached is not None and cached["name"]:
+        return cached["name"]
+
+    valid, name = _live_lookup(ticker)
+    _validity_cache[ticker] = {"valid": valid, "name": name, "timestamp": time.time()}
+    return name or ticker
