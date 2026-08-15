@@ -11,9 +11,9 @@ from tickers import is_valid_ticker, get_company_name, get_currency_symbol
 from stock_search_api import search_stocks
 from stock_api import get_quote
 from news_api import get_news
-from history_api import get_history
+from history_api import get_history, VALID_INTERVALS
 from signal_api import build_signal
-from fundamentals_api import get_fundamentals, format_market_cap
+from fundamentals_api import get_fundamentals, get_fundamental_trends, format_market_cap, format_large_number
 
 # Load environment variables from .env
 load_dotenv()
@@ -374,8 +374,14 @@ def stock_detail(ticker):
     name = get_company_name(ticker)
     quote = get_quote(ticker)
     news = get_news(ticker)
-    history = get_history(ticker)
+
+    interval = request.args.get("interval", "1d")
+    if interval not in VALID_INTERVALS:
+        interval = "1d"
+    history = get_history(ticker, interval=interval)
+
     fundamentals = get_fundamentals(ticker)
+    trends = get_fundamental_trends(ticker)
     currency = get_currency_symbol(ticker)
     market_cap_display = format_market_cap(fundamentals["market_cap"], currency)
 
@@ -400,6 +406,9 @@ def stock_detail(ticker):
         signal=signal,
         fundamentals=fundamentals,
         market_cap_display=market_cap_display,
+        trends=trends,
+        format_large_number=format_large_number,
+        selected_interval=interval,
     )
 
 

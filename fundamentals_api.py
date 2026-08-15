@@ -29,6 +29,17 @@ EMPTY_RESULT = {
     "week52_low": None,
     "debt_to_equity": None,
     "profit_margin": None,
+    "pb_ratio": None,
+    "ps_ratio": None,
+}
+
+EMPTY_TRENDS = {
+    "available": False,
+    "quarters": [],
+    "revenue": [],
+    "net_income": [],
+    "eps": [],
+    "free_cash_flow": [],
 }
 
 
@@ -74,6 +85,8 @@ def _fetch_once(ticker):
         "week52_low": _round(info.get("fiftyTwoWeekLow"), 2),
         "debt_to_equity": _round(info.get("debtToEquity"), 2),
         "profit_margin": _round(profit_margin * 100, 1) if isinstance(profit_margin, (int, float)) else None,
+        "pb_ratio": _round(info.get("priceToBook"), 2),
+        "ps_ratio": _round(info.get("priceToSalesTrailing12Months"), 2),
     }
 
 
@@ -98,6 +111,115 @@ def get_fundamentals(ticker):
             continue
 
     return _store(ticker, dict(EMPTY_RESULT))
+
+
+_trends_cache = {}
+TRENDS_CACHE_TTL_SECONDS = 3600
+TRENDS_NEGATIVE_CACHE_TTL_SECONDS = 120
+
+# yfinance's row labels vary slightly by ticker/region - try each candidate in order.
+_REVENUE_ROWS = ["Total Revenue", "TotalRevenue"]
+_NET_INCOME_ROWS = ["Net Income", "NetIncome", "Net Income Common Stockholders"]
+_EPS_ROWS = ["Diluted EPS", "Basic EPS"]
+_FCF_ROWS = ["Free Cash Flow", "FreeCashFlow"]
+
+
+def _get_trends_cached(ticker):
+    entry = _trends_cache.get(ticker)
+    if not entry:
+        return None
+    ttl = TRENDS_CACHE_TTL_SECONDS if entry["data"]["available"] else TRENDS_NEGATIVE_CACHE_TTL_SECONDS
+    if (time.time() - entry["timestamp"]) < ttl:
+        return entry["data"]
+    return None
+
+
+def _row_values(df, candidate_names, num_quarters):
+    """Pull a row from a yfinance quarterly statement DataFrame by trying each
+    candidate row name, oldest-to-newest, limited to num_quarters. Returns None
+    if no candidate row exists."""
+    if df is None or df.empty:
+        return None
+    for name in candidate_names:
+        if name in df.index:
+            row = df.loc[name].dropna()
+            row = row.sort_index()  # oldest -> newest, left to right on the chart
+            row = row.iloc[-num_quarters:]
+            return [round(float(v), 2) for v in row]
+    return None
+
+
+def _fetch_trends_once(ticker, num_quarters=8):
+    tk = yf.Ticker(ticker, session=_session)
+    income_stmt = tk.quarterly_income_stmt
+    cashflow = tk.quarterly_cashflow
+
+    if income_stmt is None or income_stmt.empty:
+        return dict(EMPTY_TRENDS)
+
+    revenue = _row_values(income_stmt, _REVENUE_ROWS, num_quarters)
+    net_income = _row_values(income_stmt, _NET_INCOME_ROWS, num_quarters)
+    eps = _row_values(income_stmt, _EPS_ROWS, num_quarters)
+    fcf = _row_values(cashflow, _FCF_ROWS, num_quarters)
+
+    if revenue is None and net_income is None and eps is None and fcf is None:
+        return dict(EMPTY_TRENDS)
+
+    # Quarter labels come from whichever series is longest/most reliable (revenue, usually)
+    quarter_source = None
+    for name in _REVENUE_ROWS:
+        if name in income_stmt.index:
+            quarter_source = income_stmt.loc[name].dropna().sort_index().iloc[-num_quarters:]
+            break
+    quarters = [d.strftime("%b %Y") for d in quarter_source.index] if quarter_source is not None else []
+
+    return {
+        "available": True,
+        "quarters": quarters,
+        "revenue": revenue or [],
+        "net_income": net_income or [],
+        "eps": eps or [],
+        "free_cash_flow": fcf or [],
+    }
+
+
+def get_fundamental_trends(ticker):
+    """
+    Fetch recent quarterly Revenue, Net Income, EPS, and Free Cash Flow for a
+    ticker, for the fundamentals trend charts on the stock detail page.
+    Never raises - on any failure, returns an "unavailable" result. Retries
+    once on transient errors.
+    """
+    cached = _get_trends_cached(ticker)
+    if cached is not None:
+        return cached
+
+    for attempt in range(2):
+        try:
+            result = _fetch_trends_once(ticker)
+            _trends_cache[ticker] = {"data": result, "timestamp": time.time()}
+            return result
+        except Exception as e:
+            print(f"[fundamentals_api] get_fundamental_trends({ticker}) attempt {attempt} failed: {e!r}", file=sys.stderr, flush=True)
+            if attempt == 0:
+                time.sleep(0.3)
+            continue
+
+    result = dict(EMPTY_TRENDS)
+    _trends_cache[ticker] = {"data": result, "timestamp": time.time()}
+    return result
+
+
+def format_large_number(value, currency_symbol):
+    """Format a raw large number (market cap, revenue, net income, etc.) into a
+    readable string, e.g. $2.95T, ₹18.2L Cr, or ($120.00M) for negatives."""
+    if value is None:
+        return "N/A"
+
+    negative = value < 0
+    abs_value = abs(value)
+    formatted = format_market_cap(abs_value, currency_symbol)
+    return f"({formatted})" if negative else formatted
 
 
 def format_market_cap(value, currency_symbol):
