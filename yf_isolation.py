@@ -18,6 +18,17 @@ import sys
 import multiprocessing
 
 
+def _get_context():
+    """Use "fork" where available (Linux/Mac, including Render) since it's
+    fast and lightweight. Windows doesn't support "fork" at all - fall back
+    to the platform default ("spawn" on Windows) there so this still works
+    for local development."""
+    try:
+        return multiprocessing.get_context("fork")
+    except ValueError:
+        return multiprocessing.get_context()
+
+
 def _worker(func, args, kwargs, queue):
     try:
         result = func(*args, **kwargs)
@@ -34,9 +45,12 @@ def run_isolated(func, *args, timeout=20, **kwargs):
     exactly like any other "data unavailable" case.
     func's return value must be picklable (plain dicts/lists/strings/numbers
     are fine - that's all every yfinance-wrapping function here returns).
+    func itself must also be picklable by reference (a module-level function,
+    not a local closure or lambda) since on platforms using "spawn" (Windows)
+    the child re-imports it rather than inheriting it directly.
     """
     name = getattr(func, "__name__", str(func))
-    ctx = multiprocessing.get_context("fork")
+    ctx = _get_context()
     queue = ctx.Queue()
     process = ctx.Process(target=_worker, args=(func, args, kwargs, queue))
     process.start()
