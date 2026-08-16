@@ -14,6 +14,7 @@ import sys
 import time
 import yfinance as yf
 from yf_session import get_session
+from yf_isolation import run_isolated
 
 TICKERS = [
     {"ticker": "AAPL", "name": "Apple Inc."},
@@ -168,18 +169,27 @@ def _get_cached_validity(ticker):
     return None
 
 
-def _live_lookup(ticker: str):
-    """Confirm a ticker is real via yfinance, and grab its display name while we're at it.
-    Returns (valid: bool, name: str or None). Never raises."""
-    try:
-        info = yf.Ticker(ticker, session=get_session()).get_info()
-        if not info or not info.get("symbol"):
-            return False, None
-        name = info.get("longName") or info.get("shortName") or ticker
-        return True, name
-    except Exception as e:
-        print(f"[tickers] live lookup for {ticker!r} failed: {e!r}", file=sys.stderr, flush=True)
+def _live_lookup_raw(ticker: str):
+    """Actual yfinance call - runs inside an isolated process via run_isolated().
+    Returns (valid: bool, name: str or None). May raise - that's fine, the
+    isolation wrapper below treats any exception/crash the same way."""
+    info = yf.Ticker(ticker, session=get_session()).get_info()
+    if not info or not info.get("symbol"):
         return False, None
+    name = info.get("longName") or info.get("shortName") or ticker
+    return True, name
+
+
+def _live_lookup(ticker: str):
+    """Confirm a ticker is real via yfinance, and grab its display name while
+    we're at it. Runs in an isolated process - see yf_isolation.py: a crash
+    here (curl_cffi has been observed to segfault) only kills that isolated
+    process, not the whole server. Never raises."""
+    result = run_isolated(_live_lookup_raw, ticker, timeout=15)
+    if result is None:
+        print(f"[tickers] live lookup for {ticker!r} failed or crashed", file=sys.stderr, flush=True)
+        return False, None
+    return result
 
 
 def is_valid_ticker(ticker: str) -> bool:

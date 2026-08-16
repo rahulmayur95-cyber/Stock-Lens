@@ -10,6 +10,7 @@ import sys
 import time
 import yfinance as yf
 from yf_session import get_session
+from yf_isolation import run_isolated
 
 _cache = {}
 CACHE_TTL_SECONDS = 3600  # fundamentals change slowly - cache 1 hour
@@ -98,14 +99,12 @@ def get_fundamentals(ticker):
         return cached
 
     for attempt in range(2):
-        try:
-            result = _fetch_once(ticker)
+        result = run_isolated(_fetch_once, ticker, timeout=20)
+        if result is not None:
             return _store(ticker, result)
-        except Exception as e:
-            print(f"[fundamentals_api] get_fundamentals({ticker}) attempt {attempt} failed: {e!r}", file=sys.stderr, flush=True)
-            if attempt == 0:
-                time.sleep(0.3)
-            continue
+        if attempt == 0:
+            print(f"[fundamentals_api] get_fundamentals({ticker}) attempt {attempt} failed, retrying", file=sys.stderr, flush=True)
+            time.sleep(0.3)
 
     return _store(ticker, dict(EMPTY_RESULT))
 
@@ -192,15 +191,13 @@ def get_fundamental_trends(ticker):
         return cached
 
     for attempt in range(2):
-        try:
-            result = _fetch_trends_once(ticker)
+        result = run_isolated(_fetch_trends_once, ticker, timeout=20)
+        if result is not None:
             _trends_cache[ticker] = {"data": result, "timestamp": time.time()}
             return result
-        except Exception as e:
-            print(f"[fundamentals_api] get_fundamental_trends({ticker}) attempt {attempt} failed: {e!r}", file=sys.stderr, flush=True)
-            if attempt == 0:
-                time.sleep(0.3)
-            continue
+        if attempt == 0:
+            print(f"[fundamentals_api] get_fundamental_trends({ticker}) attempt {attempt} failed, retrying", file=sys.stderr, flush=True)
+            time.sleep(0.3)
 
     result = dict(EMPTY_TRENDS)
     _trends_cache[ticker] = {"data": result, "timestamp": time.time()}

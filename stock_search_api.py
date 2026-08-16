@@ -12,6 +12,7 @@ import sys
 import time
 import yfinance as yf
 from yf_session import get_session
+from yf_isolation import run_isolated
 
 from tickers import search_tickers as search_curated
 
@@ -35,12 +36,10 @@ def _display_name(quote):
     return quote.get("longname") or quote.get("shortname") or quote.get("symbol", "")
 
 
-def _search_live(query, limit):
-    try:
-        results = yf.Search(query, max_results=limit, session=get_session()).quotes
-    except Exception as e:
-        print(f"[stock_search_api] live search for {query!r} failed: {e!r}", file=sys.stderr, flush=True)
-        return []
+def _search_live_raw(query, limit):
+    """Actual yfinance call - runs inside an isolated process via run_isolated().
+    May raise - the isolation wrapper below handles that."""
+    results = yf.Search(query, max_results=limit, session=get_session()).quotes
 
     matches = []
     for quote in results:
@@ -56,6 +55,17 @@ def _search_live(query, limit):
         matches.append({"ticker": symbol, "name": name})
 
     return matches
+
+
+def _search_live(query, limit):
+    """Live search via yfinance, isolated in a separate process - see
+    yf_isolation.py: a crash here (curl_cffi has been observed to segfault)
+    only kills that isolated process, not the whole server. Never raises."""
+    result = run_isolated(_search_live_raw, query, limit, timeout=15)
+    if result is None:
+        print(f"[stock_search_api] live search for {query!r} failed or crashed", file=sys.stderr, flush=True)
+        return []
+    return result
 
 
 def search_stocks(query, limit=12):

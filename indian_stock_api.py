@@ -10,6 +10,7 @@ import sys
 import time
 import yfinance as yf
 from yf_session import get_session
+from yf_isolation import run_isolated
 
 # Simple in-memory cache: { ticker: {"data": {...}, "timestamp": epoch_seconds} }
 _cache = {}
@@ -70,21 +71,20 @@ def get_quote_indian(ticker):
     """
     Fetch price, % change, and P/E ratio for an Indian (NSE) ticker via yfinance.
     Returns a dict: {"price": float, "change_percent": float, "pe_ratio": float or None, "available": bool}
-    Never raises - on any failure, returns available=False so the UI can show a fallback.
-    Retries once on transient errors before giving up.
+    Never raises - on any failure (including a low-level crash in the fetch, which
+    is isolated to a separate process so it can't take down the whole server),
+    returns available=False so the UI can show a fallback. Retries once.
     """
     cached = _get_cached(ticker)
     if cached is not None:
         return cached
 
     for attempt in range(2):  # try once, retry once on failure
-        try:
-            result = _fetch_quote_once(ticker)
+        result = run_isolated(_fetch_quote_once, ticker, timeout=15)
+        if result is not None:
             return _store(ticker, result)
-        except Exception as e:
-            print(f"[indian_stock_api] get_quote_indian({ticker}) attempt {attempt} failed: {e!r}", file=sys.stderr, flush=True)
-            if attempt == 0:
-                time.sleep(0.3)
-            continue
+        if attempt == 0:
+            print(f"[indian_stock_api] get_quote_indian({ticker}) attempt {attempt} failed, retrying", file=sys.stderr, flush=True)
+            time.sleep(0.3)
 
     return _store(ticker, {"price": None, "change_percent": None, "pe_ratio": None, "available": False})

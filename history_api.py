@@ -19,6 +19,7 @@ import time
 import pandas as pd
 import yfinance as yf
 from yf_session import get_session
+from yf_isolation import run_isolated
 
 _cache = {}
 CACHE_TTL_SECONDS = 900  # history changes slowly intraday - cache 15 minutes
@@ -255,13 +256,11 @@ def get_history(ticker, interval="1d"):
         return cached
 
     for attempt in range(2):
-        try:
-            result = _fetch_once(ticker, interval)
+        result = run_isolated(_fetch_once, ticker, interval, timeout=25)
+        if result is not None:
             return _store(ticker, interval, result)
-        except Exception as e:
-            print(f"[history_api] get_history({ticker}, {interval}) attempt {attempt} failed: {e!r}", file=sys.stderr, flush=True)
-            if attempt == 0:
-                time.sleep(0.3)
-            continue
+        if attempt == 0:
+            print(f"[history_api] get_history({ticker}, {interval}) attempt {attempt} failed, retrying", file=sys.stderr, flush=True)
+            time.sleep(0.3)
 
     return _store(ticker, interval, dict(EMPTY_RESULT, interval=interval))

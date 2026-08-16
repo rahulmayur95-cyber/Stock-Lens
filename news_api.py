@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import requests
 import yfinance as yf
 from yf_session import get_session
+from yf_isolation import run_isolated
 
 from tickers import is_indian_ticker
 
@@ -25,18 +26,11 @@ def _is_cache_fresh(ticker):
     return (time.time() - entry["timestamp"]) < CACHE_TTL_SECONDS
 
 
-def _get_news_yfinance(ticker, limit):
-    """
-    Fetch news via yfinance. Used for Indian tickers (Finnhub's free tier
-    doesn't cover NSE/BSE company news) and as a fallback for anything
-    Finnhub returns nothing for.
-    """
-    try:
-        tk = yf.Ticker(ticker, session=get_session())
-        items = tk.get_news(count=limit) or []
-    except Exception as e:
-        print(f"[news_api] yfinance news for {ticker} failed: {e!r}", file=sys.stderr, flush=True)
-        return []
+def _get_news_yfinance_raw(ticker, limit):
+    """Actual yfinance call - runs inside an isolated process via run_isolated().
+    May raise - the isolation wrapper below handles that."""
+    tk = yf.Ticker(ticker, session=get_session())
+    items = tk.get_news(count=limit) or []
 
     results = []
     for item in items[:limit]:
@@ -58,6 +52,21 @@ def _get_news_yfinance(ticker, limit):
         results.append({"title": title, "source": source, "url": url, "published": published})
 
     return results
+
+
+def _get_news_yfinance(ticker, limit):
+    """
+    Fetch news via yfinance. Used for Indian tickers (Finnhub's free tier
+    doesn't cover NSE/BSE company news) and as a fallback for anything
+    Finnhub returns nothing for. Runs in an isolated process - see
+    yf_isolation.py: a crash here (curl_cffi has been observed to segfault)
+    only kills that isolated process, not the whole server.
+    """
+    result = run_isolated(_get_news_yfinance_raw, ticker, limit, timeout=15)
+    if result is None:
+        print(f"[news_api] yfinance news for {ticker} failed or crashed", file=sys.stderr, flush=True)
+        return []
+    return result
 
 
 def _get_news_finnhub(ticker, limit):
